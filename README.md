@@ -54,20 +54,17 @@ Recent deep-learning-based video compression methods brought coding gains over c
 
 ```
 ffmpeg -i video.y4m video/f%05d.png
-
 ```
 
 2. Convert uncompressed frames to HEVC compressed video (quantization factor of CRF)
    HEVC setting is 'medium'
 ```
 ffmpeg -i video/f%05d.png -c:v hevc -preset medium -x265-params bframes=0 -crf CRF video.mp4
-
 ```
 
 3. Extract frames from HEVC compressed video
 ```
 ffmpeg -i video.mp4 FILE/f%05d.png
-
 ```
 
 
@@ -127,19 +124,16 @@ Compressed frames should look like
 
 ```
 python train.py --gpu_num=0 --crf=21 --train_step='step1' --exp_name='default/' --train_dataset='vimeo/'
-
 ```
 
 2. Run the following command for to train the network step2.
 
 ```
 python train.py --gpu_num=0 --crf=21 --train_step='step2' --exp_name='default/' --train_dataset='vimeo/'
-
 ```
 
 3. Run the following command for to evaluate the network.
 
 ```
 python eval.py --gpu_num=0 --crf=21 --train_step='step2' --exp_name='default/' --eval_dataset='UVG/'
-
 ```
