@@ -1,18 +1,18 @@
-# video_compression_cvpr2023_rhee
+# Lightweight Hybrid Video Compression Framework Using Reference-Guided Restoration Network
 
 Implementation of "Lightweight Hybrid Video Compression Framework Using Reference-Guided Restoration Network"
 
 ## Environments
 - Ubuntu 18.04
-- Pytorch 1.7.0
-- CUDA 10.0.130 & cuDNN 7.6.5
-- Python 3.7.7
+- Pytorch 1.11.0
+- CUDA 10.2 & cuDNN 7.6.5
+- Python 3.7.13
 
 You can type the following command to easily build the environment.
 Download 'fdnet_env.yml' and type the following command.
 
 ```
-conda env create -f fdnet_env.yml
+conda env create -f compression.yml
 ```
 
 ## Abstract
@@ -48,23 +48,98 @@ Recent deep-learning-based video compression methods brought coding gains over c
 ```
 
 
-## Guideline for Data Processing
+## Command line for HEVC processing
 
-Extract frames from original yuv/y4m files
-
-```
-ffmpeg -i FILE.y4m FILE/f%05d.png
+1. Extract uncompressed frames from original yuv,y4m files
 
 ```
-
-Frames to HEVC video
-```
-ffmpeg -i FILE/f%05d.png -c:v hevc -preset medium -x265-params bframes=0 -crf %d .mp4
+ffmpeg -i video.y4m video/f%05d.png
 
 ```
 
-HEVC video to frames
+2. Convert uncompressed frames to HEVC compressed video (quantization factor of CRF)
+   HEVC setting is 'medium'
 ```
-ffmpeg -i .mp4 /f%05d.png
+ffmpeg -i video/f%05d.png -c:v hevc -preset medium -x265-params bframes=0 -crf CRF video.mp4
+
+```
+
+3. Extract frames from HEVC compressed video
+```
+ffmpeg -i video.mp4 FILE/f%05d.png
+
+```
+
+
+## Using the HEVC commands, your dataset should look something like this
+
+Uncompressed frames should look like
+
+```
+|── UVG
+    ├──> video1
+        └──> f00001.png, f00002.png, ... , f00600.png
+    ├──> video2
+    ...
+    └──> video7
+└── MCL-JCV
+    ├──> video1
+        └──> f00001.png, f00002.png, ... , f00600.png
+    ├──> video2
+    ...
+    └──> video15
+```
+
+
+Compressed frames should look like
+
+```
+|── hevc_result
+    ├──> UVG
+        ├──> 21
+            ├──> video1_21.mp4, video2_21.mp4, ... video7_21.mp4
+            ├──> video1
+                └──> f00001.png, f00002.png, ... , f00600.png
+            ├──> video2
+                └──> f00001.png, f00002.png, ... , f00600.png                
+            ...
+            └──> video2
+        ├──> 23
+        ├──> 25
+        └──> 27
+    └──> MCL-JCV
+        ├──> 21
+            ├──> video1_21.mp4, video2_21.mp4, ... video7_21.mp4
+            ├──> video1
+                └──> f00001.png, f00002.png, ... , f00600.png
+            ├──> video2
+                └──> f00001.png, f00002.png, ... , f00600.png                
+            ...
+            └──> video2
+        ├──> 23
+        ├──> 25
+        └──> 27
+```
+
+## Guidelines for Codes
+
+1. Run the following command for to train the network step1.
+
+```
+python train.py --gpu_num=0 --crf=21 --train_step='step1' --exp_name='default/' --train_dataset='vimeo/'
+
+```
+
+2. Run the following command for to train the network step2.
+
+```
+python train.py --gpu_num=0 --crf=21 --train_step='step2' --exp_name='default/' --train_dataset='vimeo/'
+
+```
+
+3. Run the following command for to evaluate the network.
+
+```
+python eval.py --gpu_num=0 --crf=21 --train_step='step2' --exp_name='default/' --eval_dataset='UVG/'
 
 ```
