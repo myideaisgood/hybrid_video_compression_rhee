@@ -9,7 +9,7 @@ Implementation of "Lightweight Hybrid Video Compression Framework Using Referenc
 - Python 3.7.13
 
 You can type the following command to easily build the environment.
-Download 'fdnet_env.yml' and type the following command.
+Download 'compression.yml' and type the following command.
 
 ```
 conda env create -f compression.yml
