@@ -1,63 +1,53 @@
 import os
+import cv2
+import numpy as np
+import math
 import logging
 
-def do_conventional(data_dir, dataset, crfs, FRAME_NAME):
+def do_vvc(data_dir, dataset, qp):
 
+    SAVE_DIR = 'VVC/'
 
-    HEVC_DIR = 'hevc_result/'
-    
-    # Create ../DATASET/hevc_result/dataset/
-    # Example : ../DATASET/hevc_result/UVG/
-    os.makedirs(os.path.join(data_dir, HEVC_DIR))
-    os.makedirs(os.path.join(data_dir, HEVC_DIR, dataset))
-
-    DATA_DIR = os.path.join(data_dir, dataset)
-
-    logging.basicConfig(filename='log_conventional.txt',format='[%(levelname)s] %(asctime)s %(message)s')
+    logging.basicConfig(filename='log_vvc.txt',format='[%(levelname)s] %(asctime)s %(message)s')
     logging.getLogger().setLevel(logging.INFO)
-
     logging.info('*** Start ***')
 
-    video_names = sorted([name for name in os.listdir(DATA_DIR) if os.path.isdir(os.path.join(DATA_DIR, name))])
+    video_names = sorted(os.listdir(os.path.join(data_dir, dataset + '_raw')))
 
-    for crf in crfs:
+    os.makedirs(os.path.join(data_dir, SAVE_DIR), exist_ok=True)
+    os.makedirs(os.path.join(data_dir, SAVE_DIR, dataset), exist_ok=True)
+        
+    for video_name in video_names:
+        IN_VIDEO = os.path.join(data_dir, dataset + '_raw', video_name)
+            
+        vid_name = video_name.split('.')[0]
 
-        # Create ../DATASET/hevc_result/dataset/crf/
-        os.makedirs(os.path.join(data_dir, HEVC_DIR, dataset, str(crf)))
+        os.makedirs(os.path.join(data_dir, SAVE_DIR, dataset, vid_name), exist_ok=True)
 
-        SAVE_DIR = os.path.join(data_dir, HEVC_DIR, dataset, str(crf))
+        OUT_VIDEO = os.path.join(data_dir, SAVE_DIR, dataset, vid_name, vid_name + '_' + str(qp) + '.266')
+        DEC_VIDEO = os.path.join(data_dir, SAVE_DIR, dataset, vid_name, vid_name + '_' + str(qp) + '.y4m')
 
-        # Do HEVC if needed
-        for video_name in video_names:
-            outname = os.path.join(SAVE_DIR, video_name + '_' + str(crf) + '.mp4')
+        if not os.path.exists(OUT_VIDEO):
+            os.system('vvencapp --preset medium -i %s -s 1920x1080 --qp %d --qpa 1 -r 24 -o %s' % (IN_VIDEO, qp, OUT_VIDEO))
+            os.system('vvdecapp --bitstream %s --output %s' % (OUT_VIDEO, DEC_VIDEO))
 
-            # Do HEVC
-            if not os.path.exists(outname):
-                cur_video_dir = os.path.join(DATA_DIR, video_name)
-                os.system('ffmpeg -i %s -c:v hevc -preset medium -x265-params bframes=0 -crf %d %s' % (os.path.join(cur_video_dir, FRAME_NAME), crf, outname))
+        DEC_FRAMES = os.path.join(data_dir, SAVE_DIR, dataset, vid_name, str(qp))
 
-            # Video to frames
-            if not os.path.exists(os.path.join(SAVE_DIR, video_name)):
-                os.makedirs(os.path.join(SAVE_DIR, video_name))
-                save_name = os.path.join(SAVE_DIR, video_name, FRAME_NAME)
-                os.system('ffmpeg -i %s %s' % (outname, save_name))
+        if not os.path.exists(DEC_FRAMES):
+            os.makedirs(DEC_FRAMES, exist_ok=True)
+            os.system('ffmpeg -i %s %s' % (DEC_VIDEO, os.path.join(DEC_FRAMES, "f%05d.png")))
 
+    logging.info('*** End ***')
 
 if __name__ == '__main__':
 
     import argparse
 
-    parser = argparse.ArgumentParser(description='UNet')
-    parser.add_argument('--crf', type=int, default=22, help='crf')
+    parser = argparse.ArgumentParser(description='Configs')
+    parser.add_argument('--qp', type=int, default=22, help='qp')
     parser.add_argument('--data_dir', type=str, default='../DATASET/', help='Dataset directory')
     parser.add_argument('--dataset', type=str, default='UVG/', help='Dataset name')
 
     args = parser.parse_args()
 
-
-    if 'vimeo' in args.dataset:
-        FRAME_NAME = 'im%d.png'
-    else:
-        FRAME_NAME = 'f%05d.png'
-
-    do_conventional(args.data_dir, args.dataset, [args.crf], FRAME_NAME)
+    do_vvc(args.data_dir, args.dataset, [args.qp])

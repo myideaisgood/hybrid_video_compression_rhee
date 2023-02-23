@@ -1,3 +1,4 @@
+import enum
 import cv2
 import os
 from tqdm import tqdm
@@ -90,49 +91,6 @@ def convert2tensor(imgs, transform):
 
     return imgs
 
-def tensor2img(img_tensor):
-    img_tensor = img_tensor[0].permute(1,2,0)
-    img_np = img_tensor.detach().cpu().numpy()
-    img_np = (255*img_np).astype(np.uint8)
-
-    return img_np
-
-def unite_data(datas, SPLIT_EVAL_NUM):
-
-    H, W, _ = datas[0].shape
-
-    if SPLIT_EVAL_NUM == 1:
-        output = np.zeros([H, W, 3], dtype=np.uint8)
-        output = datas[0]
-
-    elif SPLIT_EVAL_NUM == 4:
-
-        output = np.zeros([2*H, 2*W, 3], dtype=np.uint8)
-
-        output[:H, :W, :] = datas[0]
-        output[:H, W:, :] = datas[1]
-
-        output[H:, :W, :] = datas[2]
-        output[H:, W:, :] = datas[3]
-
-
-    elif SPLIT_EVAL_NUM == 9:
-        output = np.zeros([3*H, 3*W, 3], dtype=np.uint8)
-
-        output[:H, :W, :] = datas[0]
-        output[:H, W:2*W, :] = datas[1]
-        output[:H, 2*W:3*W, :] = datas[2]
-
-        output[H:2*H, 0:W, :] = datas[3]
-        output[H:2*H, W:2*W, :] = datas[4]
-        output[H:2*H, 2*W:3*W, :] = datas[5]
-
-        output[2*H:3*H, 0:W, :] = datas[6]
-        output[2*H:3*H, W:2*W, :] = datas[7]
-        output[2*H:3*H, 2*W:3*W, :] = datas[8]
-
-    return output
-
 def evaluate(network, dataloader, device, logging, TRAIN_STEP, SPLIT_EVAL_NUM, ReferenceType):
 
     transform = transforms.ToTensor()
@@ -153,14 +111,10 @@ def evaluate(network, dataloader, device, logging, TRAIN_STEP, SPLIT_EVAL_NUM, R
 
                 c_t, x_t, x_ref = read_frames(frame_idx, hevc_frames, raw_frames, ReferenceType)
 
-                x_t_np = x_t
-
                 [c_t, x_t, x_ref] = convert2tensor([c_t, x_t, x_ref], transform)
                 [c_ts, x_ts, x_refs] = split_data([c_t, x_t, x_ref], SPLIT_EVAL_NUM)
 
                 frame_psnr = []
-
-                preds = []
 
                 for split_idx, (c_t_split, x_t_split, x_ref_split) in enumerate(zip(c_ts, x_ts, x_refs)):
 
@@ -173,14 +127,17 @@ def evaluate(network, dataloader, device, logging, TRAIN_STEP, SPLIT_EVAL_NUM, R
                     else:
                         pred = pred_2
 
-                    pred = pred_2
-
                     pred = torch.clip(pred, min=0.0, max=1.0)
-                    preds.append(tensor2img(pred))
 
-                prediction = unite_data(preds, SPLIT_EVAL_NUM)
+                    # Read PSNR
+                    pred = tensor2np(pred)
+                    x_t_split = tensor2np(x_t_split)
 
-                frame_psnr = get_psnr_np(prediction, x_t_np)
+                    psnr = get_psnr_np(pred, x_t_split)
+
+                    frame_psnr.append(psnr)
+
+                frame_psnr = sum(frame_psnr) / len(frame_psnr)
 
                 psnr_list.append(frame_psnr)
                 total_psnr_list.append(frame_psnr)

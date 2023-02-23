@@ -1,6 +1,7 @@
 import os
 import logging
 from tqdm import tqdm
+import cv2
 
 import torch
 import torch.nn as nn
@@ -23,12 +24,16 @@ def train():
 
     EPOCHS = args.epochs
     PRINT_EVERY = args.print_every
+    START_EVERY = args.start_every
+    EVAL_EVERY = args.eval_every
 
+    REFERENCE_TYPE = args.ReferenceType
     LOSS_TYPE = args.loss_type
 
     LR = args.lr
 
     TRAIN_STEP = args.train_step
+    SPLIT_EVAL_NUM = args.split_eval_num
 
     EXP_DIR = 'experiments/' + args.exp_name
     WEIGHTS = TRAIN_STEP + '_' +  args.weights
@@ -85,12 +90,14 @@ def train():
 
     # Load the pretrained model if exists
     init_epoch = 0
+    best_metric = 0.0
 
     if TRAIN_STEP == 'step1':
         if os.path.exists(os.path.join(EXP_DIR, WEIGHTS)):
             logging.info('Recovering from %s ...' % os.path.join(EXP_DIR, WEIGHTS))
             checkpoint = torch.load(os.path.join(EXP_DIR, WEIGHTS))
             init_epoch = checkpoint['epoch_idx']
+            best_metric = checkpoint['best_metric']
             network.load_state_dict(checkpoint['network'])
             logging.info('Recover completed. Current epoch = #%d' % (init_epoch))
     
@@ -99,14 +106,16 @@ def train():
             logging.info('Recovering from %s ...' % os.path.join(EXP_DIR, WEIGHTS))
             checkpoint = torch.load(os.path.join(EXP_DIR, WEIGHTS))
             init_epoch = checkpoint['epoch_idx']
+            best_metric = checkpoint['best_metric']
             network.load_state_dict(checkpoint['network'])
             logging.info('Recover completed. Current epoch = #%d' % (init_epoch))
         else:
             WEIGHTS_TEMP =  'step1_' +  args.weights
             logging.info('Recovering from %s ...' % os.path.join(EXP_DIR, WEIGHTS_TEMP))
             checkpoint = torch.load(os.path.join(EXP_DIR, WEIGHTS_TEMP))
+            step1_best_metric = checkpoint['best_metric']
             network.load_state_dict(checkpoint['network'])
-            logging.info('Recover completed.')   
+            logging.info('Recover completed. Best Metric of Step 1 = %.2f' % (step1_best_metric))   
 
     # Criterion
     if LOSS_TYPE == 'l2':
@@ -164,16 +173,25 @@ def train():
         train_loss /= len(train_dataset)
 
         if epoch_idx % PRINT_EVERY == 0:
-            logging.info('Epoch [%d/%d] Loss = %.5f LR = %.7f' % (epoch_idx, EPOCHS, train_loss, LR))                
+            logging.info('Epoch [%d/%d] Loss = %.5f LR = %.7f' % (epoch_idx, EPOCHS, train_loss, LR))
 
-            # Save Network
-            save_path = os.path.join(EXP_DIR, WEIGHTS)
-            torch.save({
-                'epoch_idx': epoch_idx,
-                'network' : network.state_dict(),
-            }, save_path)
+        if epoch_idx % EVAL_EVERY == 0 and epoch_idx > START_EVERY:
+            eval_psnr = evaluate(network, eval_dataloader, device, logging, TRAIN_STEP, SPLIT_EVAL_NUM, REFERENCE_TYPE)
 
-            logging.info('Saved checkpoint to %s ...' % save_path)
+            if eval_psnr > best_metric:
+                best_metric = eval_psnr
+
+                # Save Network
+                save_path = os.path.join(EXP_DIR, WEIGHTS)
+                torch.save({
+                    'epoch_idx': epoch_idx,
+                    'best_metric': best_metric,
+                    'network' : network.state_dict(),
+                }, save_path)
+
+                logging.info('Saved checkpoint to %s ...' % save_path)
+
+            logging.info('EVAL PSNR = %.2f  BEST PSNR = %.2f' % (eval_psnr, best_metric))                
 
 if __name__ == '__main__':
     train()    

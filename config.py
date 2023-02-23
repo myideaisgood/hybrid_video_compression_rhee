@@ -8,7 +8,7 @@ def parse_training_args(parser):
         parser: An argparse object.
     """
 
-    parser.add_argument('--crf', type=int, default=25, help='crf')
+    parser.add_argument('--qp', type=int, default=22, help='qp')
     parser.add_argument('--train_step', type=str, default='step2', help='step1, step2')
 
     # Session parameters
@@ -17,19 +17,21 @@ def parse_training_args(parser):
     parser.add_argument('--num_workers', type=int, default=4, help='Worker')
     parser.add_argument('--epochs', type=int, default=1000, help='Number of epochs to train')
     parser.add_argument('--print_every', type=int, default=1, help='How many iterations print for loss evaluation')
+    parser.add_argument('--start_every', type=int, default=100, help='How many iterations to save')                        
+    parser.add_argument('--eval_every', type=int, default=20, help='How many iterations to save')                        
 
-    parser.add_argument('--split_eval_num', type=int, default=9, help='Number to split during inference (due to memory size) (Can be 1, 4, 9)')
+    parser.add_argument('--split_eval_num', type=int, default=9, help='Number to split during inference')
 
     ### learning rate
     parser.add_argument('--lr', type=float, default=1e-4, help='learning rate, default=0.0005')
 
     # Directory parameters
-    parser.add_argument('--data_dir', type=str, default='../DATASET/', help='dataset directory')
-    parser.add_argument('--train_dataset', type=str, default='MCL-JCV/', help='train dataset')
-    parser.add_argument('--eval_dataset', type=str, default='UVG/', help='evaluation dataset')
-    parser.add_argument('--exp_name', type=str, default='UVG_crf25/', help='Experiment Name directory')
+    parser.add_argument('--data_dir', type=str, default='../DATASET/', help='dataset')
+    parser.add_argument('--train_dataset', type=str, default='UVG/', help='dataset')
+    parser.add_argument('--eval_dataset', type=str, default='UVG/', help='dataset')
+    parser.add_argument('--exp_name', type=str, default='default/', help='Experiment Name directory')
     parser.add_argument('--weights', type=str, default="ckpt.pth", help='Weight Name')
-    parser.add_argument('--hevc_dir', type=str, default='hevc_result/', help='hevc result directory')
+    parser.add_argument('--vvc_dir', type=str, default='VVC/', help='hevc result directory')
 
     # Data Crop parameters
     parser.add_argument('--crop_size', type=int, default=256, help='Crop Size')
