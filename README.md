@@ -17,6 +17,7 @@ Implementation of "Lightweight Hybrid Video Compression Framework Using Referenc
 # Installation of VVC (VVenC/VVdeC)
 
 [VVenC] (https://github.com/fraunhoferhhi/vvenc)
+
 [VVdeC] (https://github.com/fraunhoferhhi/vvdec)
 
 ## Brief explanation of contents
